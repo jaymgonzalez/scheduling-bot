@@ -41,6 +41,7 @@ def send_whatsapp_message():
 
 # Call the function
 response = send_whatsapp_message()
+print(response.request.body)
 print(response.status_code)
 print(response.json())
 
