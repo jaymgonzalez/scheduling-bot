@@ -25,7 +25,52 @@ def get_text_message_input(recipient, text):
     )
 
 
-def generate_response(response):
+def get_initial_temaplte(recipient):
+    return json.dumps(
+        {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": recipient,
+            "type": "template",
+            "template": {
+                # "namespace": "Dentist Bot",
+                "name": "test0",
+                "language": {
+                    "code": "es",
+                },
+                # "components": [
+                #     {
+                #         "type": "body",
+                #         "parameters": [
+                #             {
+                #                 "type": "text",
+                #                 "text": "Hola, esto es un mensaje de testeo. Haz click en el boton de abajo para ver mi web.",
+                #             }
+                #         ],
+                #     },
+                #     {
+                #         "type": "button",
+                #         "sub_type": "url",
+                #         "parameters": [
+                #             {
+                #                 "type": "text",
+                #                 "text": "Pincha aqui",
+                #             },
+                #             {
+                #                 "type": "url",
+                #                 "url": "https://www.jaymgonzalez.com",
+                #             },
+                #         ],
+                #     },
+                # ],
+            },
+        }
+    )
+
+
+def generate_response(response, wa_id, name):
+    if response.lower() == "hello":
+        return get_initial_temaplte(wa_id)
     # Return text in uppercase
     return response.upper()
 
@@ -79,11 +124,13 @@ def process_whatsapp_message(body):
     wa_id = body["entry"][0]["changes"][0]["value"]["contacts"][0]["wa_id"]
     name = body["entry"][0]["changes"][0]["value"]["contacts"][0]["profile"]["name"]
 
+    # print(wa_id, name)
+
     message = body["entry"][0]["changes"][0]["value"]["messages"][0]
     message_body = message["text"]["body"]
 
     # TODO: implement custom function here
-    response = generate_response(message_body)
+    response = generate_response(message_body, wa_id, name)
 
     # OpenAI Integration
     # response = generate_response(message_body, wa_id, name)
