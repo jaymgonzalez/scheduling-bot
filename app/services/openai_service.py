@@ -11,6 +11,24 @@ OPENAI_ASSISTANT_ID = os.getenv("OPENAI_ASSISTANT_ID")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 
+def get_calendar_text(schedule):
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                "role": "system",
+                "content": "Your task is to output the following schedule in a table format with NO titles. Transform the start and end to HH:MM.",
+            },
+            {
+                "role": "user",
+                "content": f"###schedule### \n\n {schedule} \n\n ###schedule###",
+            },
+        ],
+    )
+    print(response)
+    return response.choices[0].message.content
+
+
 def upload_file(path):
     # Upload a file with an "assistants" purpose
     file = client.files.create(
