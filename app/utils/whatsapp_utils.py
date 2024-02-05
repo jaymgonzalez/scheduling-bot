@@ -77,8 +77,6 @@ def check_if_routine_exists(wa_id):
 
 
 def check_add_routine_format(s):
-    import re
-
     pattern = r"add routine [a-zA-Z0-9]+ : [a-zA-Z0-9]+ : [a-zA-Z0-9]+"
     return bool(re.search(pattern, s))
 
@@ -124,6 +122,33 @@ def replyReaction_Message(number, messageId, emoji):
     return data
 
 
+def listReply_Message(number, options, body, footer, sedd, messageId):
+    rows = []
+    for i, option in enumerate(options):
+        rows.append(
+            {"id": sedd + "_row_" + str(i + 1), "title": option, "description": ""}
+        )
+
+    data = json.dumps(
+        {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": number,
+            "type": "interactive",
+            "interactive": {
+                "type": "list",
+                "body": {"text": body},
+                "footer": {"text": footer},
+                "action": {
+                    "button": "Ver Opciones",
+                    "sections": [{"title": "Secciones", "rows": rows}],
+                },
+            },
+        }
+    )
+    return data
+
+
 def generate_response(response, wa_id, name):
     if response.lower() == "hello":
         # return get_initial_template(wa_id, name)
@@ -135,20 +160,34 @@ def generate_response(response, wa_id, name):
         return buttonReply_Message(wa_id, options, body, footer, header, "seed", "1")
 
     if response.lower() == "⚡ schedule your day":
-        schedule = get_daily_schedule(wa_id)
+        routines = check_if_routine_exists(wa_id)
+        if routines is None:
+            body = "Tenemos varias áreas de consulta para elegir. ¿Cuál de estos servicios te gustaría explorar?"
+            footer = "Equipo Bigdateros"
+            header = f"{name}"
+            options = [
+                "Analítica Avanzada",
+                "Migración Cloud",
+                "Inteligencia de Negocio",
+            ]
 
-        formated_schedule = get_calendar_text(schedule)
+            listReplyData = listReply_Message(wa_id, options, body, footer, "sed2", "1")
 
-        print(formated_schedule)
+            return listReplyData
+        else:  # Routines exist
 
-        print("holi")
-        body = f"This is your calendar for today \n\n```{formated_schedule}```"
-        # body = "Happy to help you today 😊 \n\nPlease click in the buttons below to select your action. \n\n*⚡ Schedule Your Day* ➡️ To generate a new schedule for today \n\n*📅 Update Routines* ➡️ To update the routines you provided in the past"
-        footer = "AI Scheduler"
-        options = ["⚡ Schedule Your Day", "📅 Update Routines"]
-        header = f"{name}"
+            schedule = get_daily_schedule(wa_id)
 
-        return buttonReply_Message(wa_id, options, body, footer, header, "seed", "1")
+            formated_schedule = get_calendar_text(schedule)
+
+            body = f"This is your calendar for today \n\n```{formated_schedule}``` \n\n And here are your routines: \n\n```{check_if_routine_exists(wa_id)}```"
+            footer = "AI Scheduler"
+            options = ["⚡ Schedule Your Day", "📅 Update Routines"]
+            header = f"{name}"
+
+            return buttonReply_Message(
+                wa_id, options, body, footer, header, "seed", "2"
+            )
         # body = "test"
         # footer = "AI Scheduler"
         # options = ["Add To Google Calendar", "📅 agendar cita"]
@@ -160,16 +199,10 @@ def generate_response(response, wa_id, name):
         # print(get_text_message_input(wa_id, schedule))
         # return schedule
     if response.lower() == "check routines":
-        routines = check_if_routine_exists(wa_id)
-        if routines is None:
-            return get_text_message_input(
-                wa_id, "You have no routines, to add one, type 'add routine'"
-            )
-        else:  # Routines exist
-            return get_text_message_input(
-                wa_id,
-                f"These are your routines: \n{routines} \n to update a routine, type 'update routine'",
-            )
+        return get_text_message_input(
+            wa_id,
+            f"These are your routines: \n{routines} \n to update a routine, type 'update routine'",
+        )
     if response.lower() == "add routine":
         return get_text_message_input(
             wa_id,
@@ -231,6 +264,31 @@ def process_text_for_whatsapp(text):
     return whatsapp_style_text
 
 
+def get_whatsapp_message(message):
+    if "type" not in message:
+        text = "mensaje not recognized"
+        return text
+
+    type_message = message["type"]
+    if type_message == "text":
+        text = message["text"]["body"]
+    elif type_message == "button":
+        text = message["button"]["text"]
+    elif (
+        type_message == "interactive" and message["interactive"]["type"] == "list_reply"
+    ):
+        text = message["interactive"]["list_reply"]["title"]
+    elif (
+        type_message == "interactive"
+        and message["interactive"]["type"] == "button_reply"
+    ):
+        text = message["interactive"]["button_reply"]["title"]
+    else:
+        text = "message not processed"
+
+    return text
+
+
 def process_whatsapp_message(body):
     wa_id = body["entry"][0]["changes"][0]["value"]["contacts"][0]["wa_id"]
     name = body["entry"][0]["changes"][0]["value"]["contacts"][0]["profile"]["name"]
@@ -240,12 +298,7 @@ def process_whatsapp_message(body):
     message = body["entry"][0]["changes"][0]["value"]["messages"][0]
     print(f"message = {message}")
 
-    if message["type"] == "text":
-        message_body = message["text"]["body"]
-    elif message["type"] == "interactive":
-        message_body = message["interactive"]["button_reply"]["title"]
-    elif message["type"] == "button":
-        message_body = message["button"]["text"]
+    message_body = get_whatsapp_message(message)
 
     # TODO: implement custom function here
     response = generate_response(message_body, wa_id, name)
