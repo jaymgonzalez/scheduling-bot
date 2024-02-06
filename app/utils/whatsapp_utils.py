@@ -162,16 +162,17 @@ def generate_response(response, wa_id, name):
     if response.lower() == "⚡ schedule your day":
         routines = check_if_routine_exists(wa_id)
         if routines is None:
-            body = "Tenemos varias áreas de consulta para elegir. ¿Cuál de estos servicios te gustaría explorar?"
-            footer = "Equipo Bigdateros"
+            body = f"To create a routine for your day, please provide the activities you would like to schedule"
+            footer = "AI Scheduler"
             header = f"{name}"
             options = [
                 "Analítica Avanzada",
                 "Migración Cloud",
-                "Inteligencia de Negocio",
             ]
 
-            listReplyData = listReply_Message(wa_id, options, body, footer, "sed2", "1")
+            listReplyData = buttonReply_Message(
+                wa_id, options, body, footer, header, "seed2", "1"
+            )
 
             return listReplyData
         else:  # Routines exist
